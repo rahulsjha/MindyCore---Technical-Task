@@ -29,11 +29,11 @@ class Settings(BaseSettings):
     )
     db_internal_username: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("DB_INTERNALUSERNAME"),
+        validation_alias=AliasChoices("DB_INTERNALUSERNAME", "DB_INTERNAL_USERNAME"),
     )
     db_external_username: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("DB_EXTERNALUSERNAME"),
+        validation_alias=AliasChoices("DB_EXTERNALUSERNAME", "DB_EXTERNAL_USERNAME"),
     )
     db_hostname: str | None = Field(default=None, validation_alias=AliasChoices("DB_HOSTNAME"))
     db_username: str | None = Field(default=None, validation_alias=AliasChoices("DB_USERNAME"))

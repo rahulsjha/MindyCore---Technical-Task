@@ -24,7 +24,7 @@ def prepare_database() -> None:
 @pytest.fixture(autouse=True)
 def clean_database() -> None:
     with engine.begin() as connection:
-        connection.exec_driver_sql("TRUNCATE TABLE instructions RESTART IDENTITY CASCADE")
+        connection.exec_driver_sql("DELETE FROM instructions")
     yield
 
 
