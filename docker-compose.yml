@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mindy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mindy}
+      POSTGRES_DB: ${POSTGRES_DB:-mindy_task}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mindy} -d ${POSTGRES_DB:-mindy_task}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://mindy:mindy@db:5432/mindy_task}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-secret}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
