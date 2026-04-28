@@ -1,0 +1,1 @@
+# MindyCore---Technical-Task
