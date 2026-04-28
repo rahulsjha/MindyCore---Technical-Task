@@ -18,7 +18,7 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://mindy:mindy@db:5432/mindy_task}
+      DATABASE_URL: ${DB_INTERNALUSERNAME:-${DATABASE_URL:-postgresql+psycopg://mindy:mindy@db:5432/mindy_task}}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-secret}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
