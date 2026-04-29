@@ -32,14 +32,14 @@ A production-ready FastAPI service for managing assistant instructions with JWT 
 
 ### Key Features
 
-✅ Stateless JWT authentication with hardcoded test credentials  
-✅ CRUD endpoints for instructions (create, read, delete)  
-✅ Proper HTTP status codes (201, 204, 401, 404, 422)  
-✅ Request/response validation with Pydantic  
-✅ Automatic database table creation on startup  
-✅ Environment-driven configuration (no hardcoded secrets)  
-✅ Docker containerization with health checks  
-✅ Full test coverage (pytest + live endpoint tests)
+* Stateless JWT authentication with hardcoded test credentials  
+* CRUD endpoints for instructions (create, read, delete)  
+* Proper HTTP status codes (201, 204, 401, 404, 422)  
+* Request/response validation with Pydantic  
+* Automatic database table creation on startup  
+* Environment-driven configuration (no hardcoded secrets)  
+* Docker containerization with health checks  
+* Full test coverage (pytest + live endpoint tests)
 
 ---
 
@@ -615,51 +615,193 @@ The app normalizes all to `postgresql+psycopg://` format for SQLAlchemy compatib
 
 ## Testing
 
-### Unit & Integration Tests
+### Quick Start: Start the Backend Locally
 
-Run the full suite:
+#### Option A: Start with Docker Compose (Recommended)
 
 ```bash
-# With SQLite (fast, no database needed)
+# Start PostgreSQL + API in background
+docker-compose up -d --build
+
+# Wait for health check to pass (should be ready in 30 seconds)
+while ! curl -s http://localhost:8000/health &> /dev/null; do
+  echo "Waiting for API to be ready..."
+  sleep 2
+done
+
+echo "✓ Backend is ready at http://localhost:8000"
+```
+
+#### Option B: Start with Python/Uvicorn (No Docker)
+
+```bash
+# Install dependencies
+python3 -m pip install -r requirements.txt
+
+# Start with SQLite (no external database needed)
+DATABASE_URL='sqlite+pysqlite:///./mindy_task.db' \
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# In another terminal, verify it started:
+curl http://localhost:8000/health
+```
+
+#### Option C: Start with External PostgreSQL
+
+```bash
+# Set your database URL
+export DATABASE_URL='postgresql+psycopg://user:password@localhost:5432/mindy_task'
+
+# Start the API
+python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+### Complete End-to-End Testing
+
+We provide a comprehensive bash script that tests **all 11 scenarios** covering all API endpoints:
+
+#### Test All Endpoints (Local Backend)
+
+```bash
+# Make script executable
+chmod +x test_all_endpoints.sh
+
+# Start backend and run all 11 tests
+./test_all_endpoints.sh
+```
+
+This script automatically:
+1. ✓ Starts the backend (Docker Compose or Python)
+2. ✓ Runs all 11 endpoint tests
+3. ✓ Validates request/response formats
+4. ✓ Tests error handling (401, 404, 422)
+5. ✓ Cleans up on exit
+
+**Sample Output:**
+```
+╔════════════════════════════════════════════════════════════════╗
+║         mindy-task API - Complete End-to-End Test Suite        ║
+╚════════════════════════════════════════════════════════════════╝
+
+[20:15:30] Checking prerequisites...
+✓ Prerequisites OK
+
+[20:15:30] Starting local backend...
+✓ Backend started (Docker Compose)
+
+[20:15:35] Testing API endpoints at http://localhost:8000
+
+[20:15:35] TEST 1: Health Check (GET /health)
+✓ GET /health → 200
+✓ Health check returned 'ok'
+
+[20:15:35] TEST 2: Unauthorized Access (GET /instructions with invalid token)
+✓ Invalid token rejected with 401
+
+[20:15:35] TEST 3: Generate JWT Token (POST /auth/token)
+✓ POST /auth/token → 200
+✓ Token generated: eyJhbGciOiJIUzI1NiIsInR5cCI...
+
+[20:15:36] TEST 4: List Instructions (GET /instructions, initially empty)
+✓ GET /instructions → 200
+✓ Instructions list is empty (expected on first run)
+
+[20:15:36] TEST 5: Create Instruction #1 (POST /instructions)
+✓ POST /instructions → 201
+✓ Instruction created with ID: 550e8400-e29b-41d4-a7...
+
+...
+
+╔════════════════════════════════════════════════════════════════╗
+║                         TEST SUMMARY                           ║
+╚════════════════════════════════════════════════════════════════╝
+
+Total Tests: 11
+Passed: 11
+Failed: 0
+
+All tests passed! ✓
+```
+
+#### Test Against Render Deployment
+
+```bash
+# Test against live Render API
+./test_all_endpoints.sh https://mindycore-technical-task.onrender.com
+```
+
+This runs the same 11 tests against your live deployment.
+
+---
+
+### Manual Testing with curl
+
+If you prefer manual testing, here are the basic commands:
+
+```bash
+# 1. Health check
+curl http://localhost:8000/health
+
+# 2. Get JWT token
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"mindy2026"}' | jq -r '.access_token')
+
+echo "Token: $TOKEN"
+
+# 3. List instructions
+curl http://localhost:8000/instructions \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. Create instruction
+INSTRUCTION=$(curl -s -X POST http://localhost:8000/instructions \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title":"Test","content":"Test content"}')
+
+echo "Created: $INSTRUCTION"
+
+# Extract instruction ID
+INSTRUCTION_ID=$(echo $INSTRUCTION | jq -r '.id')
+
+# 5. Delete instruction
+curl -X DELETE http://localhost:8000/instructions/$INSTRUCTION_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### Unit & Integration Tests
+
+Run the pytest test suite:
+
+```bash
+# With SQLite (fast, no external database needed)
 TEST_DATABASE_URL=sqlite+pysqlite:///./.pytest_test.db \
 python3 -m pytest -v
 
 # With Docker Compose PostgreSQL
 docker-compose run --rm api pytest -v
 
-# Coverage report
+# Coverage report (generates HTML report in htmlcov/)
 pytest --cov=app --cov-report=html
 ```
 
-### Test Coverage (9 Tests)
+### Test Coverage (9 Unit Tests)
 
-| Test | Endpoint | Auth | Validation |
+| Test | Endpoint | Auth | Validates |
 |------|----------|------|-----------|
-| `test_health_endpoint` | GET /health | No | 200 OK |
-| `test_token_endpoint_returns_jwt` | POST /auth/token | No | Valid JWT returned |
-| `test_token_endpoint_rejects_invalid_credentials` | POST /auth/token | No | 401 Unauthorized |
-| `test_list_instructions_starts_empty` | GET /instructions | JWT | 200 OK, empty list |
-| `test_protected_endpoints_reject_missing_token` | GET /instructions | No | 401 Unauthorized |
-| `test_create_instruction_persists_record` | POST /instructions | JWT | 201 Created, UUID |
-| `test_create_instruction_rejects_validation_errors` | POST /instructions | JWT | 422 Unprocessable |
-| `test_delete_instruction_removes_record` | DELETE /instructions/{id} | JWT | 204 No Content |
-| `test_invalid_token_is_rejected` | GET /instructions | Bad JWT | 401 Unauthorized |
-
-### Live Endpoint Testing
-
-Test against a running Render deployment:
-
-```bash
-chmod +x test_render_endpoint.sh
-./test_render_endpoint.sh https://mindycore-technical-task.onrender.com
-```
-
-This script tests:
-1. Health check
-2. Token generation
-3. Protected endpoint access
-4. Full CRUD cycle
-5. Error handling (401, 404, 422)
+| `test_health_endpoint` | GET /health | No | 200 OK response |
+| `test_token_endpoint_returns_jwt` | POST /auth/token | No | Valid JWT with 'sub' and 'exp' claims |
+| `test_token_endpoint_rejects_invalid_credentials` | POST /auth/token | No | 401 Unauthorized for wrong password |
+| `test_list_instructions_starts_empty` | GET /instructions | JWT | 200 OK, returns empty list initially |
+| `test_protected_endpoints_reject_missing_token` | GET /instructions | No | 401 Unauthorized without token |
+| `test_create_instruction_persists_record` | POST /instructions | JWT | 201 Created, record persists to database |
+| `test_create_instruction_rejects_validation_errors` | POST /instructions | JWT | 422 Unprocessable Entity for bad input |
+| `test_delete_instruction_removes_record` | DELETE /instructions/{id} | JWT | 204 No Content, record removed from DB |
+| `test_invalid_token_is_rejected` | GET /instructions | Bad JWT | 401 Unauthorized, token validation fails |
 
 ---
 
