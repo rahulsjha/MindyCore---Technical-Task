@@ -394,7 +394,7 @@ cp .env.example .env
 #### 1b. Run with Docker Compose
 
 ```bash
-docker-compose up --build
+docker-compose -f docker-compose-render.yml up
 ```
 
 **What happens:**
@@ -403,26 +403,11 @@ docker-compose up --build
 3. API container starts, creates tables, and listens on port 8000.
 4. Logs stream to your terminal.
 
-**To run in the background:**
-```bash
-docker-compose up -d --build
-docker-compose logs -f api  # Stream logs
-```
 
 #### 1c. Test the Endpoints
 
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Get token
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"mindy2026"}' | jq -r '.access_token')
-
-# List instructions
-curl http://localhost:8000/instructions \
-  -H "Authorization: Bearer $TOKEN"
+# All subtests defined there
+bash ./test.sh
 ```
 
 #### 1d. Stop
@@ -432,29 +417,8 @@ docker-compose down          # Stop and remove containers
 docker-compose down -v       # Also remove volumes (delete database)
 ```
 
----
 
-### Option 2: Local Python Development (Without Docker)
-
-#### 2a. Install Dependencies
-
-```bash
-python3 -m pip install -r requirements.txt
-```
-
-#### 2b. Run with SQLite (No Database Setup)
-
-```bash
-DATABASE_URL='sqlite+pysqlite:///./mindy_task.db' \
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-**Why SQLite for local dev:**
-- No external database needed.
-- Fast startup and teardown.
-- Still exercises the full ORM and schema.
-
-#### 2c. Run with External PostgreSQL
+#### 2 Run with External PostgreSQL
 
 ```bash
 export DATABASE_URL='postgresql+psycopg://user:password@localhost:5432/mindy_task'
